@@ -14,6 +14,7 @@ const largeColumn = { width: '40%' };
 const smallColumn = { width: '10%' };
 const midColumn = { width: '30%' };
 
+const Loading = () => <div>Loading...</div>
 class App extends Component {
   constructor(props) {
     super(props);
@@ -21,6 +22,8 @@ class App extends Component {
       results: null,
       searchKey: '',
       searchTerm: DEFAULT_QUERY,
+      error: null,
+      isLoading: false,
     };
   }
 
@@ -39,16 +42,18 @@ class App extends Component {
     this.setState({
       results: {
         ...results,
-        [searchKey]: { hits: updatedHits, page }
-      }
+        [searchKey]: { hits: updatedHits, page },
+      },
+      isLoading: false,
     });
   }
 
   fetchSearchTopStories = (searchTerm, page = 0) => {
+    this.setState({ isLoading: true })
     fetch(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${PARAM_HPP}${DEFAULT_HPP}`)
       .then(response => response.json())
       .then(result => this.setSearchTopStories(result))
-      .catch(error => error);
+      .catch(error => this.setState({ error }));
   }
 
   componentDidMount() {
@@ -86,9 +91,12 @@ class App extends Component {
   }
 
   render() {
-    const { searchTerm, results, searchKey } = this.state;
+    const { searchTerm, results, searchKey, error, isLoading } = this.state;
     const page = (results && results[searchKey] && results[searchKey].page) || 0;
     const list = (results && results[searchKey] && results[searchKey].hits) || [];
+    if (error) {
+      return <p> Something went wrong.</p>
+    }
 
     return (
       <div className="page">
@@ -101,14 +109,14 @@ class App extends Component {
             Search
           </Search>
         </div>
-
-        <Table
-          list={list}
-          onDismiss={this.onDismiss}
-        />
-
+        {error ? <div className='interactions'><p>Something went wrong.</p></div> 
+        : <Table
+            list={list}
+            onDismiss={this.onDismiss}
+          />
+        }
         <div className='interactions'>
-          <Button onClick={() => this.fetchSearchTopStories(searchKey, page + 1)}>More</Button>
+        { isLoading ? <Loading /> : <Button onClick={() => this.fetchSearchTopStories(searchKey, page+1)}>More</Button>}
         </div>
       </div>
     );
@@ -117,29 +125,29 @@ class App extends Component {
 
 class Search extends Component {
   componentDidMount() {
-    if(this.input) {
+    if (this.input) {
       this.input.focus();
     }
   }
-  render(){
+  render() {
     const { value, onChange, onSubmit, children } = this.props;
 
-    return(
+    return (
       <form onSubmit={onSubmit}>
-      <input
-        type="text"
-        value={value}
-        onChange={onChange} 
-        ref={el => this.input = el}
+        <input
+          type="text"
+          value={value}
+          onChange={onChange}
+          ref={el => this.input = el}
         />
-      <button type='submit'>
-        {children}
-      </button>
-    </form>
+        <button type='submit'>
+          {children}
+        </button>
+      </form>
     )
   }
 }
- 
+
 
 const Table = ({ list, onDismiss }) =>
 
